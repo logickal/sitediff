@@ -16,7 +16,8 @@ export async function fetchPages(baseUrl: string, paths: string[], logFn: (msg: 
       await page.goto(fullUrl, {waitUntil: 'networkidle'});
       const html = await page.content();
       const screenshot = await page.screenshot({fullPage: true});
-      results[fullUrl] = {html, screenshot};
+      results[path] = {html, screenshot};  // ✅ Use `path` as key
+      logFn(`Fetched and stored content for ${path}`);
     } catch (err) {
       logFn(`Error fetching ${fullUrl}: ${err}`);
     }

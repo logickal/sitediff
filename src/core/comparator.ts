@@ -10,20 +10,24 @@ interface PageData {
 }
 
 interface SitePages {
-  [url: string]: PageData;
+  [path: string]: PageData;
 }
 
 export async function compareSites(prodPages: SitePages, testPages: SitePages) {
   const results = [];
   await fs.mkdir('diff_output', {recursive: true});
 
-  for (const url of Object.keys(prodPages)) {
-    const prod = prodPages[url];
-    const test = testPages[url];
+  for (const pathKey of Object.keys(prodPages)) {
+    const prod = prodPages[pathKey];
+    const test = testPages[pathKey];
+
     if (!test) {
-      results.push({ url, matchScore: 0, notes: 'Missing on test site' });
+      console.warn(`[DIFF] Test site missing for ${pathKey}`);
+      results.push({ url: pathKey, matchScore: 0, notes: 'Missing on test site' });
       continue;
     }
+
+    console.log(`[DIFF] Comparing ${pathKey}...`);
 
     let score = 100;
     let notes = 'OK';
@@ -40,17 +44,18 @@ export async function compareSites(prodPages: SitePages, testPages: SitePages) {
       score = Math.max(0, 100 - percentDiff);
 
       if (percentDiff > 2) {
-        diffImagePath = path.join('diff_output', encodeURIComponent(url) + '_diff.png');
+        diffImagePath = path.join('diff_output', encodeURIComponent(pathKey) + '_diff.png');
         await fs.writeFile(diffImagePath, PNG.sync.write(diff));
         notes = `Visual diff: ${percentDiff.toFixed(2)}% mismatch`;
       }
     } catch (e) {
       score = 0;
       notes = 'Error comparing screenshots';
+      console.error(`[DIFF] Error comparing ${pathKey}:`, e);
     }
 
     results.push({
-      url,
+      url: pathKey,
       matchScore: score,
       notes,
       screenshotDiffPath: diffImagePath,
