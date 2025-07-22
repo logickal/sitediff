@@ -15,6 +15,8 @@ interface SitePages {
 }
 
 interface CompareOptions {
+  prodBaseUrl?: string;
+  testBaseUrl?: string;
   mismatchThreshold?: number;
   htmlThreshold?: number;
   imageThreshold?: number;
@@ -25,6 +27,21 @@ function sanitizeFilename(urlPath: string): string {
     .replace(/^\/+/, '')       // remove leading slashes
     .replace(/[^a-z0-9]/gi, '_') // replace non-alphanumerics
     .toLowerCase();
+}
+
+function normalizeHtmlForComparison(html: string, baseUrls: string[], stripNonces = true): string {
+  let normalized = html;
+
+  for (const base of baseUrls) {
+    const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    normalized = normalized.replace(new RegExp(escaped, 'g'), '__BASEURL__');
+  }
+
+  if (stripNonces) {
+    normalized = normalized.replace(/nonce-[-\w]+/g, 'nonce-__REDACTED__');
+  }
+
+  return normalized;
 }
 
 function calculateHtmlDiffPercent(htmlA: string, htmlB: string): number {
@@ -63,7 +80,9 @@ export async function compareSites(
     let shouldInclude = true;
 
     try {
-      htmlDiffPercent = calculateHtmlDiffPercent(prod.html, test.html);
+      const normalizedProdHtml = normalizeHtmlForComparison(prod.html, [options.prodBaseUrl ?? '', options.testBaseUrl ?? '']);
+      const normalizedTestHtml = normalizeHtmlForComparison(test.html, [options.prodBaseUrl ?? '', options.testBaseUrl ?? '']);
+      htmlDiffPercent = calculateHtmlDiffPercent(normalizedProdHtml, normalizedTestHtml);
 
       const prodPng = PNG.sync.read(prod.screenshot);
       const testPng = PNG.sync.read(test.screenshot);

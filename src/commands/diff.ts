@@ -56,10 +56,13 @@ export default class Diff extends Command {
 
     this.log('Comparing sites...');
     await compareSites(prodPages, testPages, {
-      mismatchThreshold: flags.mismatchThreshold,
-      htmlThreshold: flags.htmlThreshold,
-      imageThreshold: flags.imageThreshold,
+        prodBaseUrl: flags.prod,
+        testBaseUrl: flags.test,
+        mismatchThreshold: flags.mismatchThreshold,
+        htmlThreshold: flags.htmlThreshold,
+        imageThreshold: flags.imageThreshold,
     });
+
 
     this.log('Diff complete. Report written to report.html');
   }
