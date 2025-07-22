@@ -13,6 +13,7 @@ export default class Diff extends Command {
     test: Flags.string({required: true, description: 'Base URL of test site'}),
     sitemap: Flags.string({required: false, description: 'Optional sitemap.xml path'}),
     urlList: Flags.string({required: false, description: 'Path to a text file containing URLs to compare'}),
+    mismatchThreshold: Flags.integer({required: false, default: 2, description: 'Percent mismatch threshold to trigger screenshot diff output'}),
   };
 
   async run() {
@@ -52,7 +53,7 @@ export default class Diff extends Command {
     const testPages = await fetchPages(flags.test, urls, (msg: string) => this.log(`[TEST] ${msg}`));
 
     this.log('Comparing sites...');
-    await compareSites(prodPages, testPages);
+    await compareSites(prodPages, testPages, flags.mismatchThreshold);
 
     this.log('Diff complete. Report written to report.html');
   }
