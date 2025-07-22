@@ -13,7 +13,9 @@ export default class Diff extends Command {
     test: Flags.string({required: true, description: 'Base URL of test site'}),
     sitemap: Flags.string({required: false, description: 'Optional sitemap.xml path'}),
     urlList: Flags.string({required: false, description: 'Path to a text file containing URLs to compare'}),
-    mismatchThreshold: Flags.integer({required: false, default: 2, description: 'Percent mismatch threshold to trigger screenshot diff output'}),
+    mismatchThreshold: Flags.integer({required: false, description: 'Only report on items with overall match score below this percentage (e.g., 100 - score)' }),
+    htmlThreshold: Flags.integer({required: false, description: 'Generate HTML diff report for items with HTML diff percentage above this value'}),
+    imageThreshold: Flags.integer({required: false, description: 'Generate screenshot diff for items with visual diff percentage above this value'}),
   };
 
   async run() {
@@ -53,7 +55,11 @@ export default class Diff extends Command {
     const testPages = await fetchPages(flags.test, urls, (msg: string) => this.log(`[TEST] ${msg}`));
 
     this.log('Comparing sites...');
-    await compareSites(prodPages, testPages, flags.mismatchThreshold);
+    await compareSites(prodPages, testPages, {
+      mismatchThreshold: flags.mismatchThreshold,
+      htmlThreshold: flags.htmlThreshold,
+      imageThreshold: flags.imageThreshold,
+    });
 
     this.log('Diff complete. Report written to report.html');
   }

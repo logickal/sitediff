@@ -14,6 +14,12 @@ interface SitePages {
   [path: string]: PageData;
 }
 
+interface CompareOptions {
+  mismatchThreshold?: number;
+  htmlThreshold?: number;
+  imageThreshold?: number;
+}
+
 function sanitizeFilename(urlPath: string): string {
   return urlPath
     .replace(/^\/+/, '')       // remove leading slashes
@@ -32,7 +38,7 @@ function calculateHtmlDiffPercent(htmlA: string, htmlB: string): number {
 export async function compareSites(
   prodPages: SitePages,
   testPages: SitePages,
-  mismatchThreshold: number = 2
+  options: CompareOptions = {}
 ) {
   const results = [];
   await fs.mkdir('diff_output', {recursive: true});
@@ -54,37 +60,35 @@ export async function compareSites(
     let diffImagePath;
     let visualDiffPercent = 0;
     let htmlDiffPercent = 0;
+    let shouldInclude = true;
 
     try {
-      // HTML diff analysis
       htmlDiffPercent = calculateHtmlDiffPercent(prod.html, test.html);
 
-      // Screenshot diff analysis
       const prodPng = PNG.sync.read(prod.screenshot);
       const testPng = PNG.sync.read(test.screenshot);
-
       const width = Math.min(prodPng.width, testPng.width);
       const height = Math.min(prodPng.height, testPng.height);
 
       const diff = new PNG({width, height});
-
       const mismatch = pixelmatch(
         prodPng.data, testPng.data, diff.data,
         width, height,
         {threshold: 0.1}
       );
-
       visualDiffPercent = (mismatch / (width * height)) * 100;
-      const visualScore = Math.max(0, 100 - visualDiffPercent);
 
-      if (visualDiffPercent > mismatchThreshold) {
+      score = Math.round((100 - visualDiffPercent + 100 - htmlDiffPercent) / 2);
+
+      if (options.imageThreshold !== undefined && visualDiffPercent > options.imageThreshold) {
         const safeFilename = sanitizeFilename(pathKey) + '_diff.png';
         diffImagePath = path.join('diff_output', safeFilename);
         await fs.writeFile(diffImagePath, PNG.sync.write(diff));
       }
 
-      notes = 'OK';
-      score = Math.round((100 - visualDiffPercent + 100 - htmlDiffPercent) / 2);
+      if (options.mismatchThreshold !== undefined && score >= (100 - options.mismatchThreshold)) {
+        shouldInclude = false;
+      }
 
     } catch (e) {
       score = 0;
@@ -92,15 +96,19 @@ export async function compareSites(
       console.error(`[DIFF] Error comparing ${pathKey}:`, e);
     }
 
-    results.push({
-      url: pathKey,
-      matchScore: score,
-      visualDiff: visualDiffPercent,
-      htmlDiff: htmlDiffPercent,
-      notes,
-      screenshotDiffPath: diffImagePath,
-    });
+    if (shouldInclude) {
+      results.push({
+        url: pathKey,
+        matchScore: score,
+        visualDiff: visualDiffPercent,
+        htmlDiff: htmlDiffPercent,
+        notes,
+        screenshotDiffPath: diffImagePath,
+        prodHtml: prod.html,
+        testHtml: test.html,
+      });
+    }
   }
 
-  await generateHtmlReport(results);
+  await generateHtmlReport(results, 'report.html', options.htmlThreshold ?? 0);
 }
