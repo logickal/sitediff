@@ -45,8 +45,15 @@ export default class Diff extends Command {
       this.log(`  ${path}`);
     }
 
-    const prodPages = await fetchPages(flags.prod, urls);
-    const testPages = await fetchPages(flags.test, urls);
+    this.log('Fetching pages from production site...');
+    const prodPages = await fetchPages(flags.prod, urls, (msg: string) => this.log(`[PROD] ${msg}`));
+
+    this.log('Fetching pages from test site...');
+    const testPages = await fetchPages(flags.test, urls, (msg: string) => this.log(`[TEST] ${msg}`));
+
+    this.log('Comparing sites...');
     await compareSites(prodPages, testPages);
+
+    this.log('Diff complete. Report written to report.html');
   }
 }
