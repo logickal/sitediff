@@ -1,4 +1,5 @@
 import fs from 'fs/promises';
+import path from 'path';
 
 interface PageResult {
   url: string;
@@ -8,14 +9,17 @@ interface PageResult {
 }
 
 export async function generateHtmlReport(results: PageResult[], outputPath: string = 'report.html') {
-  const rows = results.map(r => `
-    <tr>
-      <td><a href="${r.url}" target="_blank">${r.url}</a></td>
-      <td>${r.matchScore.toFixed(1)}%</td>
-      <td>${r.notes}</td>
-      <td>${r.screenshotDiffPath ? `<img src="${r.screenshotDiffPath}" width="200"/>` : 'N/A'}</td>
-    </tr>
-  `).join('');
+  const rows = results.map(r => {
+    const relativeImagePath = r.screenshotDiffPath ? path.relative(path.dirname(outputPath), r.screenshotDiffPath) : null;
+    return `
+      <tr>
+        <td><a href="${r.url}" target="_blank">${r.url}</a></td>
+        <td>${r.matchScore.toFixed(1)}%</td>
+        <td>${r.notes}</td>
+        <td>${relativeImagePath ? `<img src="${relativeImagePath}" width="200"/>` : 'N/A'}</td>
+      </tr>
+    `;
+  }).join('');
 
   const html = `<!DOCTYPE html>
 <html lang="en">

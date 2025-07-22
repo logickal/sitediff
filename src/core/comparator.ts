@@ -13,10 +13,17 @@ interface SitePages {
   [path: string]: PageData;
 }
 
+function sanitizeFilename(urlPath: string): string {
+  return urlPath
+    .replace(/^\/+/, '')       // remove leading slashes
+    .replace(/[^a-z0-9]/gi, '_') // replace non-alphanumerics
+    .toLowerCase();
+}
+
 export async function compareSites(
   prodPages: SitePages,
   testPages: SitePages,
-  mismatchThreshold: number = 2 // Default to 2% unless specified
+  mismatchThreshold: number = 2
 ) {
   const results = [];
   await fs.mkdir('diff_output', {recursive: true});
@@ -49,14 +56,15 @@ export async function compareSites(
       const mismatch = pixelmatch(
         prodPng.data, testPng.data, diff.data,
         width, height,
-        {threshold: 0.1} // lower threshold = more sensitive
+        {threshold: 0.1}
       );
 
       const percentDiff = (mismatch / (width * height)) * 100;
       score = Math.max(0, 100 - percentDiff);
 
       if (percentDiff > mismatchThreshold) {
-        diffImagePath = path.join('diff_output', encodeURIComponent(pathKey) + '_diff.png');
+        const safeFilename = sanitizeFilename(pathKey) + '_diff.png';
+        diffImagePath = path.join('diff_output', safeFilename);
         await fs.writeFile(diffImagePath, PNG.sync.write(diff));
         notes = `Visual diff: ${percentDiff.toFixed(2)}% mismatch`;
       }
