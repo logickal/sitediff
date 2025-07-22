@@ -4,6 +4,8 @@ import path from 'path';
 interface PageResult {
   url: string;
   matchScore: number;
+  visualDiff: number | null;
+  htmlDiff: number | null;
   notes: string;
   screenshotDiffPath?: string;
 }
@@ -15,6 +17,8 @@ export async function generateHtmlReport(results: PageResult[], outputPath: stri
       <tr>
         <td><a href="${r.url}" target="_blank">${r.url}</a></td>
         <td>${r.matchScore.toFixed(1)}%</td>
+        <td>${r.visualDiff !== null ? r.visualDiff.toFixed(2) + '%' : 'N/A'}</td>
+        <td>${r.htmlDiff !== null ? r.htmlDiff.toFixed(2) + '%' : 'N/A'}</td>
         <td>${r.notes}</td>
         <td>${relativeImagePath ? `<img src="${relativeImagePath}" width="200"/>` : 'N/A'}</td>
       </tr>
@@ -40,8 +44,10 @@ export async function generateHtmlReport(results: PageResult[], outputPath: stri
       <tr>
         <th>URL</th>
         <th>Match Score</th>
-        <th>Notes</th>
         <th>Visual Diff</th>
+        <th>HTML Diff</th>
+        <th>Notes</th>
+        <th>Visual Preview</th>
       </tr>
     </thead>
     <tbody>
