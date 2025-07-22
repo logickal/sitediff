@@ -20,6 +20,7 @@ interface CompareOptions {
   mismatchThreshold?: number;
   htmlThreshold?: number;
   imageThreshold?: number;
+  strictHtml?: boolean;
 }
 
 function sanitizeFilename(urlPath: string): string {

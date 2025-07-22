@@ -16,6 +16,7 @@ export default class Diff extends Command {
     mismatchThreshold: Flags.integer({required: false, description: 'Only report on items with overall match score below this percentage (e.g., 100 - score)' }),
     htmlThreshold: Flags.integer({required: false, description: 'Generate HTML diff report for items with HTML diff percentage above this value'}),
     imageThreshold: Flags.integer({required: false, description: 'Generate screenshot diff for items with visual diff percentage above this value'}),
+    strictHtml: Flags.boolean({required: false, default: false, description: 'Enable strict HTML comparison (ignores whitespace, comments, etc.)'}),
   };
 
   async run() {
@@ -61,6 +62,7 @@ export default class Diff extends Command {
         mismatchThreshold: flags.mismatchThreshold,
         htmlThreshold: flags.htmlThreshold,
         imageThreshold: flags.imageThreshold,
+        strictHtml: flags.strictHtml,
     });
 
 
