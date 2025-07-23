@@ -32,17 +32,22 @@ function sanitizeFilename(urlPath: string): string {
     .toLowerCase();
 }
 
-function normalizeHtmlForComparison(html: string, baseUrls: string[], stripNonces = true): string {
+function normalizeHtmlForComparison(html: string, baseUrls: string[], strict = false): string {
+  if (strict) return html;
+
   let normalized = html;
 
   for (const base of baseUrls) {
-    const escaped = base.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    if (!base) continue;
+    const escaped = base.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\\$&`);
     normalized = normalized.replaceAll(new RegExp(escaped, 'g'), '__BASEURL__');
+
+    const alt = base.endsWith('/') ? base.slice(0, -1) : base + '/';
+    const escapedAlt = alt.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\\$&`);
+    normalized = normalized.replaceAll(new RegExp(escapedAlt, 'g'), '__BASEURL__/');
   }
 
-  if (stripNonces) {
-    normalized = normalized.replaceAll(/nonce-[-\w]+/g, 'nonce-__REDACTED__');
-  }
+  normalized = normalized.replaceAll(/nonce=(['"]).*?\1/g, 'nonce=$1__REDACTED__$1');
 
   return normalized;
 }
@@ -88,10 +93,12 @@ export async function compareSites(
       normalizedProdHtml = normalizeHtmlForComparison(
         prod.html,
         [options.prodBaseUrl ?? '', options.testBaseUrl ?? ''],
+        options.strictHtml ?? false,
       );
       normalizedTestHtml = normalizeHtmlForComparison(
         test.html,
         [options.prodBaseUrl ?? '', options.testBaseUrl ?? ''],
+        options.strictHtml ?? false,
       );
       htmlDiffPercent = calculateHtmlDiffPercent(normalizedProdHtml, normalizedTestHtml);
 
