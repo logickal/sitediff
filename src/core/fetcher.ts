@@ -1,10 +1,11 @@
+/* eslint-disable no-await-in-loop */
 import {chromium} from 'playwright';
 
 export async function fetchPages(baseUrl: string, paths: string[], logFn: (msg: string) => void) {
   const browser = await chromium.launch();
   const context = await browser.newContext();
   const page = await context.newPage();
-  page.setDefaultNavigationTimeout(60000); // 60 seconds
+  page.setDefaultNavigationTimeout(60_000); // 60 seconds
 
   const results: Record<string, {html: string; screenshot: Buffer}> = {};
 
@@ -18,8 +19,8 @@ export async function fetchPages(baseUrl: string, paths: string[], logFn: (msg: 
       const screenshot = await page.screenshot({fullPage: true});
       results[path] = {html, screenshot};  // ✅ Use `path` as key
       logFn(`Fetched and stored content for ${path}`);
-    } catch (err) {
-      logFn(`Error fetching ${fullUrl}: ${err}`);
+    } catch (error) {
+      logFn(`Error fetching ${fullUrl}: ${error}`);
     }
   }
 

@@ -1,22 +1,22 @@
 import {Command, Flags} from '@oclif/core';
-import fs from 'fs/promises';
-import {URL} from 'url';
+import fs from 'node:fs/promises';
+import {URL} from 'node:url';
+
+import {compareSites} from '../core/comparator.js';
 import {crawlSitePlaywright} from '../core/crawler.js';
 import {fetchPages} from '../core/fetcher.js';
-import {compareSites} from '../core/comparator.js';
 
 export default class Diff extends Command {
   static description = 'Compare two websites (prod and test)';
-
-  static flags = {
-    prod: Flags.string({required: true, description: 'Base URL of production site'}),
-    test: Flags.string({required: true, description: 'Base URL of test site'}),
-    sitemap: Flags.string({required: false, description: 'Optional sitemap.xml path'}),
-    urlList: Flags.string({required: false, description: 'Path to a text file containing URLs to compare'}),
-    mismatchThreshold: Flags.integer({required: false, description: 'Only report on items with overall match score below this percentage (e.g., 100 - score)' }),
-    htmlThreshold: Flags.integer({required: false, description: 'Generate HTML diff report for items with HTML diff percentage above this value'}),
-    imageThreshold: Flags.integer({required: false, description: 'Generate screenshot diff for items with visual diff percentage above this value'}),
-    strictHtml: Flags.boolean({required: false, default: false, description: 'Enable strict HTML comparison (ignores whitespace, comments, etc.)'}),
+static flags = {
+    htmlThreshold: Flags.integer({description: 'Generate HTML diff report for items with HTML diff percentage above this value', required: false}),
+    imageThreshold: Flags.integer({description: 'Generate screenshot diff for items with visual diff percentage above this value', required: false}),
+    mismatchThreshold: Flags.integer({description: 'Only report on items with overall match score below this percentage (e.g., 100 - score)', required: false }),
+    prod: Flags.string({description: 'Base URL of production site', required: true}),
+    sitemap: Flags.string({description: 'Optional sitemap.xml path', required: false}),
+    strictHtml: Flags.boolean({default: false, description: 'Enable strict HTML comparison (ignores whitespace, comments, etc.)', required: false}),
+    test: Flags.string({description: 'Base URL of test site', required: true}),
+    urlList: Flags.string({description: 'Path to a text file containing URLs to compare', required: false}),
   };
 
   async run() {
@@ -24,8 +24,7 @@ export default class Diff extends Command {
     let urls: string[];
 
     if (flags.urlList) {
-      const fileContent = await fs.readFile(flags.urlList, 'utf-8');
-      const prodBase = new URL(flags.prod);
+      const fileContent = await fs.readFile(flags.urlList, 'utf8');
       urls = fileContent
         .split(/\r?\n/)
         .map(line => line.trim())
@@ -34,7 +33,7 @@ export default class Diff extends Command {
           try {
             const parsed = new URL(url);
             return parsed.pathname + parsed.search + parsed.hash;
-          } catch (e) {
+          } catch {
             this.warn(`Skipping invalid URL: ${url}`);
             return '';
           }
@@ -57,12 +56,12 @@ export default class Diff extends Command {
 
     this.log('Comparing sites...');
     await compareSites(prodPages, testPages, {
-        prodBaseUrl: flags.prod,
-        testBaseUrl: flags.test,
-        mismatchThreshold: flags.mismatchThreshold,
         htmlThreshold: flags.htmlThreshold,
         imageThreshold: flags.imageThreshold,
+        mismatchThreshold: flags.mismatchThreshold,
+        prodBaseUrl: flags.prod,
         strictHtml: flags.strictHtml,
+        testBaseUrl: flags.test,
     });
 
 
