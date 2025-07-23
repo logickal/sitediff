@@ -1,9 +1,11 @@
-import path from 'path';
-import fs from 'fs/promises';
+/* eslint-disable no-await-in-loop */
+import {diffWords} from 'diff';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import pixelmatch from 'pixelmatch';
 import {PNG} from 'pngjs';
+
 import {generateHtmlReport} from './reporter.js';
-import {diffWords} from 'diff';
 
 interface PageData {
   html: string;
@@ -15,18 +17,18 @@ interface SitePages {
 }
 
 interface CompareOptions {
-  prodBaseUrl?: string;
-  testBaseUrl?: string;
-  mismatchThreshold?: number;
   htmlThreshold?: number;
   imageThreshold?: number;
+  mismatchThreshold?: number;
+  prodBaseUrl?: string;
   strictHtml?: boolean;
+  testBaseUrl?: string;
 }
 
 function sanitizeFilename(urlPath: string): string {
   return urlPath
     .replace(/^\/+/, '')       // remove leading slashes
-    .replace(/[^a-z0-9]/gi, '_') // replace non-alphanumerics
+    .replaceAll(/[^a-z0-9]/gi, '_') // replace non-alphanumerics
     .toLowerCase();
 }
 
@@ -34,12 +36,12 @@ function normalizeHtmlForComparison(html: string, baseUrls: string[], stripNonce
   let normalized = html;
 
   for (const base of baseUrls) {
-    const escaped = base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    normalized = normalized.replace(new RegExp(escaped, 'g'), '__BASEURL__');
+    const escaped = base.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+    normalized = normalized.replaceAll(new RegExp(escaped, 'g'), '__BASEURL__');
   }
 
   if (stripNonces) {
-    normalized = normalized.replace(/nonce-[-\w]+/g, 'nonce-__REDACTED__');
+    normalized = normalized.replaceAll(/nonce-[-\w]+/g, 'nonce-__REDACTED__');
   }
 
   return normalized;
@@ -67,7 +69,7 @@ export async function compareSites(
 
     if (!test) {
       console.warn(`[DIFF] Test site missing for ${pathKey}`);
-      results.push({ url: pathKey, matchScore: 0, visualDiff: null, htmlDiff: null, notes: 'Missing on test site' });
+      results.push({ htmlDiff: null, matchScore: 0, notes: 'Missing on test site', url: pathKey, visualDiff: null });
       continue;
     }
 
@@ -78,11 +80,19 @@ export async function compareSites(
     let diffImagePath;
     let visualDiffPercent = 0;
     let htmlDiffPercent = 0;
+    let normalizedProdHtml = prod.html;
+    let normalizedTestHtml = test.html;
     let shouldInclude = true;
 
     try {
-      const normalizedProdHtml = normalizeHtmlForComparison(prod.html, [options.prodBaseUrl ?? '', options.testBaseUrl ?? '']);
-      const normalizedTestHtml = normalizeHtmlForComparison(test.html, [options.prodBaseUrl ?? '', options.testBaseUrl ?? '']);
+      normalizedProdHtml = normalizeHtmlForComparison(
+        prod.html,
+        [options.prodBaseUrl ?? '', options.testBaseUrl ?? ''],
+      );
+      normalizedTestHtml = normalizeHtmlForComparison(
+        test.html,
+        [options.prodBaseUrl ?? '', options.testBaseUrl ?? ''],
+      );
       htmlDiffPercent = calculateHtmlDiffPercent(normalizedProdHtml, normalizedTestHtml);
 
       const prodPng = PNG.sync.read(prod.screenshot);
@@ -90,7 +100,7 @@ export async function compareSites(
       const width = Math.min(prodPng.width, testPng.width);
       const height = Math.min(prodPng.height, testPng.height);
 
-      const diff = new PNG({width, height});
+      const diff = new PNG({height, width});
       const mismatch = pixelmatch(
         prodPng.data, testPng.data, diff.data,
         width, height,
@@ -110,22 +120,22 @@ export async function compareSites(
         shouldInclude = false;
       }
 
-    } catch (e) {
+    } catch (error) {
       score = 0;
       notes = 'Error comparing page content';
-      console.error(`[DIFF] Error comparing ${pathKey}:`, e);
+      console.error(`[DIFF] Error comparing ${pathKey}:`, error);
     }
 
     if (shouldInclude) {
       results.push({
-        url: pathKey,
-        matchScore: score,
-        visualDiff: visualDiffPercent,
         htmlDiff: htmlDiffPercent,
+        matchScore: score,
         notes,
+        prodHtml: normalizedProdHtml,
         screenshotDiffPath: diffImagePath,
-        prodHtml: prod.html,
-        testHtml: test.html,
+        testHtml: normalizedTestHtml,
+        url: pathKey,
+        visualDiff: visualDiffPercent,
       });
     }
   }
