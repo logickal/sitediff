@@ -1,16 +1,31 @@
 // eslint-disable-next-line n/no-extraneous-import
 import pLimit from 'p-limit';
-import {chromium} from 'playwright';
+import {type BrowserContextOptions, chromium} from 'playwright';
+
+export interface BasicAuth {
+  password: string;
+  username: string;
+}
+
+export interface FetchPagesOptions {
+  auth?: BasicAuth;
+  concurrency?: number;
+}
 
 export async function fetchPages(
   baseUrl: string,
   paths: string[],
   logFn: (msg: string) => void,
-  concurrency = 4,
+  options: FetchPagesOptions = {},
 ) {
   const browser = await chromium.launch();
-  const context = await browser.newContext();
-  const limit = pLimit(concurrency);
+  const contextOptions: BrowserContextOptions = {};
+  if (options.auth) {
+    contextOptions.httpCredentials = {password: options.auth.password, username: options.auth.username};
+  }
+
+  const context = await browser.newContext(contextOptions);
+  const limit = pLimit(options.concurrency ?? 4);
 
   const results: Record<string, {html: string; screenshot: Buffer}> = {};
 
