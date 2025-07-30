@@ -20,6 +20,7 @@ interface CompareOptions {
   htmlThreshold?: number;
   imageThreshold?: number;
   mismatchThreshold?: number;
+  outputPath?: string;
   prodBaseUrl?: string;
   strictHtml?: boolean;
   testBaseUrl?: string;
@@ -147,5 +148,5 @@ export async function compareSites(
     }
   }
 
-  await generateHtmlReport(results, 'report.html', options.htmlThreshold ?? 0);
+  await generateHtmlReport(results, options.outputPath ?? 'report.html', options.htmlThreshold ?? 0);
 }

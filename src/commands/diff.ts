@@ -1,10 +1,12 @@
 import {Command, Flags} from '@oclif/core';
 import fs from 'node:fs/promises';
+import path from 'node:path';
 import {URL} from 'node:url';
 
 import {compareSites} from '../core/comparator.js';
 import {crawlSitePlaywright} from '../core/crawler.js';
 import {fetchPages} from '../core/fetcher.js';
+import {buildReportFilename} from '../core/report-name.js';
 
 export default class Diff extends Command {
   static description = 'Compare two websites (prod and test)';
@@ -22,6 +24,15 @@ static flags = {
   async run() {
     const {flags} = await this.parse(Diff);
     let urls: string[];
+
+    const outputFilename = buildReportFilename({
+      htmlThreshold: flags.htmlThreshold,
+      imageThreshold: flags.imageThreshold,
+      mismatchThreshold: flags.mismatchThreshold,
+      sitemap: flags.sitemap,
+      strictHtml: flags.strictHtml,
+      urlList: flags.urlList,
+    });
 
     if (flags.urlList) {
       const fileContent = await fs.readFile(flags.urlList, 'utf8');
@@ -59,12 +70,12 @@ static flags = {
         htmlThreshold: flags.htmlThreshold,
         imageThreshold: flags.imageThreshold,
         mismatchThreshold: flags.mismatchThreshold,
+        outputPath: path.join(process.cwd(), outputFilename),
         prodBaseUrl: flags.prod,
         strictHtml: flags.strictHtml,
         testBaseUrl: flags.test,
     });
 
-
-    this.log('Diff complete. Report written to report.html');
+    this.log(`Diff complete. Report written to ${outputFilename}`);
   }
 }
