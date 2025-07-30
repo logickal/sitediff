@@ -1,3 +1,5 @@
+import path from 'node:path';
+
 export interface ReportNameOptions {
   htmlThreshold?: number;
   imageThreshold?: number;
@@ -7,18 +9,14 @@ export interface ReportNameOptions {
   urlList?: string;
 }
 
-function sanitizePart(part: string): string {
-  return part.replaceAll(/[^a-z0-9]/gi, '_');
-}
-
 export function buildReportFilename(options: ReportNameOptions): string {
   const parts: string[] = [];
   if (options.urlList) {
-    const base = options.urlList.split(/[/\\]/).pop() ?? options.urlList;
-    parts.push(sanitizePart(base.replace(/\.[^.]+$/, '')));
+    const base = path.basename(options.urlList, path.extname(options.urlList));
+    parts.push(base);
   } else if (options.sitemap) {
-    const base = options.sitemap.split(/[/\\]/).pop() ?? options.sitemap;
-    parts.push(sanitizePart(base.replace(/\.[^.]+$/, '')));
+    const base = path.basename(options.sitemap, path.extname(options.sitemap));
+    parts.push(base);
   } else {
     parts.push('crawl');
   }
