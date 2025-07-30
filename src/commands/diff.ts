@@ -33,6 +33,7 @@ static flags = {
       strictHtml: flags.strictHtml,
       urlList: flags.urlList,
     });
+    const outputPath = path.resolve(outputFilename);
 
     if (flags.urlList) {
       const fileContent = await fs.readFile(flags.urlList, 'utf8');
@@ -70,12 +71,12 @@ static flags = {
         htmlThreshold: flags.htmlThreshold,
         imageThreshold: flags.imageThreshold,
         mismatchThreshold: flags.mismatchThreshold,
-        outputPath: path.join(process.cwd(), outputFilename),
+        outputPath,
         prodBaseUrl: flags.prod,
         strictHtml: flags.strictHtml,
         testBaseUrl: flags.test,
     });
 
-    this.log(`Diff complete. Report written to ${outputFilename}`);
+    this.log(`Diff complete. Report written to ${outputPath}`);
   }
 }
