@@ -1,11 +1,10 @@
-/* eslint-disable no-await-in-loop */
 import {diffWords} from 'diff';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import pixelmatch from 'pixelmatch';
 import {PNG} from 'pngjs';
 
-import {generateHtmlReport} from './reporter.js';
+import {generateHtmlReport, type PageResult} from './reporter.js';
 
 interface PageData {
   html: string;
@@ -65,10 +64,12 @@ export async function compareSites(
   testPages: SitePages,
   options: CompareOptions = {}
 ) {
-  const results = [];
+  const results: PageResult[] = [];
   await fs.mkdir('diff_output', {recursive: true});
 
-  for (const pathKey of Object.keys(prodPages)) {
+  const keys = Object.keys(prodPages);
+
+  await Promise.all(keys.map(async pathKey => {
     const prod = prodPages[pathKey];
     const test = testPages[pathKey];
 
@@ -145,7 +146,7 @@ export async function compareSites(
         visualDiff: visualDiffPercent,
       });
     }
-  }
+  }));
 
   await generateHtmlReport(results, 'report.html', options.htmlThreshold ?? 0);
 }

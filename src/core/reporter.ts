@@ -2,7 +2,7 @@ import {diffWords} from 'diff';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 
-interface PageResult {
+export interface PageResult {
   htmlDiff: null | number;
   htmlDiffPath?: string;
   matchScore: number;
