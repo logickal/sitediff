@@ -1,23 +1,23 @@
-import fs from 'fs/promises';
-import path from 'path';
 import {diffWords} from 'diff';
+import fs from 'node:fs/promises';
+import path from 'node:path';
 
 interface PageResult {
-  url: string;
-  matchScore: number;
-  visualDiff: number | null;
-  htmlDiff: number | null;
-  notes: string;
-  screenshotDiffPath?: string;
+  htmlDiff: null | number;
   htmlDiffPath?: string;
+  matchScore: number;
+  notes: string;
   prodHtml?: string;
+  screenshotDiffPath?: string;
   testHtml?: string;
+  url: string;
+  visualDiff: null | number;
 }
 
 function buildHtmlDiffPage(prodHtml: string, testHtml: string, title: string): string {
   const diff = diffWords(prodHtml, testHtml);
   const formatted = diff.map(part => {
-    const escaped = part.value.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const escaped = part.value.replaceAll('<', '&lt;').replaceAll('>', '&gt;');
     if (part.added) return `<span style="background-color:#d4fcdc;">${escaped}</span>`;
     if (part.removed) return `<span style="background-color:#fcdada; text-decoration:line-through;">${escaped}</span>`;
     return `<span>${escaped}</span>`;
@@ -48,14 +48,14 @@ export async function generateHtmlReport(
   const reportDir = path.dirname(outputPath);
   const rows = await Promise.all(results.map(async r => {
     const relativeImagePath = r.screenshotDiffPath ? path.relative(reportDir, r.screenshotDiffPath) : null;
-    let relativeHtmlPath: string | null = null;
+    let relativeHtmlPath: null | string = null;
 
     if (r.prodHtml && r.testHtml && (r.htmlDiff !== null && r.htmlDiff > htmlDiffThreshold)) {
-      const safeFilename = r.url.replace(/^\/+/, '').replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      const safeFilename = r.url.replace(/^\/+/, '').replaceAll(/[^a-z0-9]/gi, '_').toLowerCase();
       const diffFileName = `${safeFilename}_html_diff.html`;
       const diffFilePath = path.join(reportDir, 'diff_output', diffFileName);
       const diffHtml = buildHtmlDiffPage(r.prodHtml, r.testHtml, r.url);
-      await fs.writeFile(diffFilePath, diffHtml, 'utf-8');
+      await fs.writeFile(diffFilePath, diffHtml, 'utf8');
       r.htmlDiffPath = diffFilePath;
       relativeHtmlPath = path.relative(reportDir, diffFilePath);
     } else if (r.htmlDiffPath) {
@@ -66,8 +66,8 @@ export async function generateHtmlReport(
       <tr>
         <td><a href="${r.url}" target="_blank">${r.url}</a></td>
         <td>${r.matchScore.toFixed(1)}%</td>
-        <td>${r.visualDiff !== null ? r.visualDiff.toFixed(2) + '%' : 'N/A'}</td>
-        <td>${r.htmlDiff !== null ? r.htmlDiff.toFixed(2) + '%' : 'N/A'}</td>
+        <td>${r.visualDiff === null ? 'N/A' : r.visualDiff.toFixed(2) + '%'}</td>
+        <td>${r.htmlDiff === null ? 'N/A' : r.htmlDiff.toFixed(2) + '%'}</td>
         <td>${r.notes}</td>
         <td>${relativeImagePath ? `<img src="${relativeImagePath}" width="200"/>` : 'N/A'}</td>
         <td>${relativeHtmlPath ? `<a href="${relativeHtmlPath}" target="_blank">View</a>` : 'N/A'}</td>
@@ -108,5 +108,5 @@ export async function generateHtmlReport(
 </body>
 </html>`;
 
-  await fs.writeFile(outputPath, html, 'utf-8');
+  await fs.writeFile(outputPath, html, 'utf8');
 }
