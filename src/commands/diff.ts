@@ -18,6 +18,7 @@ static flags = {
     sitemap: Flags.string({description: 'Optional sitemap.xml path', required: false}),
     strictHtml: Flags.boolean({default: false, description: 'Enable strict HTML comparison (ignores whitespace, comments, etc.)', required: false}),
     test: Flags.string({description: 'Base URL of test site', required: true}),
+    testCreds: Flags.string({description: 'Basic auth credentials for test site in username:password format', required: false}),
     urlList: Flags.string({description: 'Path to a text file containing URLs to compare', required: false}),
   };
 
@@ -64,7 +65,17 @@ static flags = {
     const prodPages = await fetchPages(flags.prod, urls, (msg: string) => this.log(`[PROD] ${msg}`));
 
     this.log('Fetching pages from test site...');
-    const testPages = await fetchPages(flags.test, urls, (msg: string) => this.log(`[TEST] ${msg}`));
+    let testAuth;
+    if (flags.testCreds) {
+      const [username, password] = flags.testCreds.split(':');
+      if (username && password) {
+        testAuth = {password, username};
+      } else {
+        this.warn('Invalid --testCreds format. Expected username:password');
+      }
+    }
+
+    const testPages = await fetchPages(flags.test, urls, (msg: string) => this.log(`[TEST] ${msg}`), {auth: testAuth});
 
     this.log('Comparing sites...');
     await compareSites(prodPages, testPages, {
