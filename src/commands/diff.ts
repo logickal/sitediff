@@ -86,7 +86,7 @@ static flags = {
         prodBaseUrl: flags.prod,
         strictHtml: flags.strictHtml,
         testBaseUrl: flags.test,
-    });
+    }, urls);
 
     this.log(`Diff complete. Report written to ${outputPath}`);
   }

@@ -1,4 +1,3 @@
-import os from 'node:os';
 // eslint-disable-next-line n/no-extraneous-import
 import pLimit from 'p-limit';
 import {type BrowserContextOptions, chromium} from 'playwright';
@@ -18,7 +17,6 @@ export async function fetchPages(
   paths: string[],
   logFn: (msg: string) => void,
   options: FetchPagesOptions = {},
-  concurrency = os.cpus().length,
 ) {
   const browser = await chromium.launch();
   const contextOptions: BrowserContextOptions = {};

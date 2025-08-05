@@ -11,7 +11,7 @@ describe('compareSites outputPath', () => {
     const buf = PNG.sync.write(png)
     const pages = {'/': {html: '<html></html>', screenshot: buf}}
     const out = path.join('tmp-output.html')
-    await compareSites(pages, pages, {outputPath: out})
+    await compareSites(pages, pages, {outputPath: out}, ['/'])
     const stat = await fs.stat(out)
     expect(stat.isFile()).to.be.true
     await fs.unlink(out)
