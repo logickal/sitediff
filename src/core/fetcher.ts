@@ -22,7 +22,9 @@ export async function fetchPages(
     page.setDefaultNavigationTimeout(60_000); // 60 seconds
 
     try {
-      await page.goto(fullUrl, {waitUntil: 'networkidle'});
+      // Using 'load' instead of 'networkidle' avoids hanging on pages
+      // that keep long-lived network connections (analytics, streaming, etc.).
+      await page.goto(fullUrl, {waitUntil: 'load'});
       const html = await page.content();
       const screenshot = await page.screenshot({fullPage: true});
       results[path] = {html, screenshot};
