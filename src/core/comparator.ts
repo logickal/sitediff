@@ -139,12 +139,23 @@ export async function compareSites(
               `[DIFF] Screenshot size mismatch for ${pathKey}: prod=${prodPng.width}x${prodPng.height}, ` +
               `test=${testPng.width}x${testPng.height}`,
             );
+
+            const maxWidth = Math.max(prodPng.width, testPng.width);
+            const maxHeight = Math.max(prodPng.height, testPng.height);
+
+            const prodAligned = new PNG({height: maxHeight, width: maxWidth});
+            const testAligned = new PNG({height: maxHeight, width: maxWidth});
+
+            PNG.bitblt(prodPng, prodAligned, 0, 0, prodPng.width, prodPng.height, 0, 0);
+            PNG.bitblt(testPng, testAligned, 0, 0, testPng.width, testPng.height, 0, 0);
+
+            prodPng = prodAligned;
+            testPng = testAligned;
           }
 
-          const width = Math.min(prodPng.width, testPng.width);
-          const height = Math.min(prodPng.height, testPng.height);
+            const {height, width} = prodPng;
 
-          const diff = new PNG({height, width});
+            const diff = new PNG({height, width});
           const mismatch = pixelmatch(
             prodPng.data,
             testPng.data,

@@ -1,12 +1,15 @@
 import {expect} from 'chai';
+import fs from 'node:fs/promises';
 import {PNG} from 'pngjs';
 
 import {compareSites} from '../../src/core/comparator.js';
 
 describe('compareSites logging', () => {
-  it('logs screenshot size info when dimensions differ', async () => {
+  it('handles screenshot size mismatch without errors', async () => {
     const small = new PNG({height: 1, width: 1});
     const large = new PNG({height: 2, width: 2});
+    large.data[0] = 255; // make it visually different
+    large.data[3] = 255;
     const smallBuf = PNG.sync.write(small);
     const largeBuf = PNG.sync.write(large);
 
@@ -19,14 +22,24 @@ describe('compareSites logging', () => {
     const origError = console.error;
     console.warn = (msg?: unknown) => {warns.push(String(msg));};
     console.error = (msg?: unknown) => {errors.push(String(msg));};
+
+    const diffFile = 'diff_output/_diff.png';
+    const reportFile = 'tmp-report.html';
+
     try {
-      await compareSites(prodPages, testPages, {}, ['/']);
+      await compareSites(prodPages, testPages, {imageThreshold: 0, outputPath: reportFile}, ['/']);
     } finally {
       console.warn = origWarn;
       console.error = origError;
     }
 
+    const stat = await fs.stat(diffFile);
+    expect(stat.isFile()).to.be.true;
+    await fs.unlink(diffFile);
+    await fs.rm('diff_output', {force: true, recursive: true});
+    await fs.unlink(reportFile);
+
     expect(warns.some(w => w.includes('Screenshot size mismatch'))).to.be.true;
-    expect(errors.some(e => e.includes('prod: 1x1') && e.includes('test: 2x2'))).to.be.true;
+    expect(errors).to.be.empty;
   });
 });
