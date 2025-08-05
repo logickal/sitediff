@@ -1,4 +1,3 @@
-import os from 'node:os';
 // eslint-disable-next-line n/no-extraneous-import
 import pLimit from 'p-limit';
 import {type BrowserContextOptions, chromium} from 'playwright';

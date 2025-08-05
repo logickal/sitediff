@@ -20,7 +20,7 @@ describe('compareSites logging', () => {
     console.warn = (msg?: unknown) => {warns.push(String(msg));};
     console.error = (msg?: unknown) => {errors.push(String(msg));};
     try {
-      await compareSites(prodPages, testPages);
+      await compareSites(prodPages, testPages, {}, ['/']);
     } finally {
       console.warn = origWarn;
       console.error = origError;
