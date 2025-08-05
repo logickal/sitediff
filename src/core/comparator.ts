@@ -67,7 +67,8 @@ function calculateHtmlDiffPercent(htmlA: string, htmlB: string): number {
 export async function compareSites(
   prodPages: SitePages,
   testPages: SitePages,
-  options: CompareOptions = {}
+  options: CompareOptions = {},
+  allPaths?: string[],
 ) {
   const results: PageResult[] = [];
   await fs.mkdir('diff_output', {recursive: true});
@@ -75,9 +76,23 @@ export async function compareSites(
   const concurrency = options.concurrency ?? os.cpus().length;
   const limit = pLimit(concurrency);
 
-  await Promise.all(Object.keys(prodPages).map(pathKey => limit(async () => {
+  const paths = allPaths ?? [...new Set([...Object.keys(prodPages), ...Object.keys(testPages)])];
+
+  await Promise.all(paths.map(pathKey => limit(async () => {
     const prod = prodPages[pathKey];
     const test = testPages[pathKey];
+
+    if (!prod && !test) {
+      console.warn(`[DIFF] Missing on both sites for ${pathKey}`);
+      results.push({htmlDiff: null, matchScore: 0, notes: 'Missing on both sites', url: pathKey, visualDiff: null});
+      return;
+    }
+
+    if (!prod) {
+      console.warn(`[DIFF] Prod site missing for ${pathKey}`);
+      results.push({htmlDiff: null, matchScore: 0, notes: 'Missing on prod site', url: pathKey, visualDiff: null});
+      return;
+    }
 
     if (!test) {
       console.warn(`[DIFF] Test site missing for ${pathKey}`);
