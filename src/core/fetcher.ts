@@ -1,3 +1,4 @@
+import os from 'node:os';
 // eslint-disable-next-line n/no-extraneous-import
 import pLimit from 'p-limit';
 import {type BrowserContextOptions, chromium} from 'playwright';
@@ -17,6 +18,7 @@ export async function fetchPages(
   paths: string[],
   logFn: (msg: string) => void,
   options: FetchPagesOptions = {},
+  concurrency = os.cpus().length,
 ) {
   const browser = await chromium.launch();
   const contextOptions: BrowserContextOptions = {};
@@ -37,7 +39,9 @@ export async function fetchPages(
     page.setDefaultNavigationTimeout(60_000); // 60 seconds
 
     try {
-      await page.goto(fullUrl, {waitUntil: 'networkidle'});
+      // Using 'load' instead of 'networkidle' avoids hanging on pages
+      // that keep long-lived network connections (analytics, streaming, etc.).
+      await page.goto(fullUrl, {waitUntil: 'load'});
       const html = await page.content();
       const screenshot = await page.screenshot({fullPage: true});
       results[path] = {html, screenshot};
