@@ -1,12 +1,12 @@
 import {Command, Flags} from '@oclif/core';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {URL} from 'node:url';
 
 import {compareSites} from '../core/comparator.js';
 import {crawlSitePlaywright} from '../core/crawler.js';
 import {fetchPages} from '../core/fetcher.js';
 import {buildReportFilename} from '../core/report-name.js';
+import {parseUrlList} from '../core/url-list.js';
 
 export default class Diff extends Command {
   static description = 'Compare two websites (prod and test)';
@@ -38,20 +38,7 @@ static flags = {
 
     if (flags.urlList) {
       const fileContent = await fs.readFile(flags.urlList, 'utf8');
-      urls = fileContent
-        .split(/\r?\n/)
-        .map(line => line.trim())
-        .filter(line => line !== '')
-        .map(url => {
-          try {
-            const parsed = new URL(url);
-            return parsed.pathname + parsed.search + parsed.hash;
-          } catch {
-            this.warn(`Skipping invalid URL: ${url}`);
-            return '';
-          }
-        })
-        .filter(path => path !== '');
+      urls = parseUrlList(fileContent);
     } else {
       urls = await crawlSitePlaywright(flags.prod);
     }

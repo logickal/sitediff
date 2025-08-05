@@ -51,7 +51,7 @@ function normalizeHtmlForComparison(html: string, baseUrls: string[], strict = f
     normalized = normalized.replaceAll(new RegExp(escapedAlt, 'g'), '__BASEURL__/');
   }
 
-  normalized = normalized.replaceAll(/nonce=(['"]).*?\1/g, 'nonce=$1__REDACTED__$1');
+  normalized = normalized.replaceAll(/nonce=(["']).*?\1/g, 'nonce=$1__REDACTED__$1');
 
   return normalized;
 }
@@ -68,7 +68,7 @@ export async function compareSites(
   prodPages: SitePages,
   testPages: SitePages,
   options: CompareOptions = {},
-  allPaths?: string[],
+  paths: string[] = [...new Set([...Object.keys(prodPages), ...Object.keys(testPages)])],
 ) {
   const results: PageResult[] = [];
   await fs.mkdir('diff_output', {recursive: true});
@@ -76,21 +76,19 @@ export async function compareSites(
   const concurrency = options.concurrency ?? os.cpus().length;
   const limit = pLimit(concurrency);
 
-  const paths = allPaths ?? [...new Set([...Object.keys(prodPages), ...Object.keys(testPages)])];
-
   await Promise.all(paths.map(pathKey => limit(async () => {
     const prod = prodPages[pathKey];
     const test = testPages[pathKey];
 
     if (!prod && !test) {
-      console.warn(`[DIFF] Missing on both sites for ${pathKey}`);
-      results.push({htmlDiff: null, matchScore: 0, notes: 'Missing on both sites', url: pathKey, visualDiff: null});
+      console.warn(`[DIFF] Page missing on both sites for ${pathKey}`);
+      results.push({ htmlDiff: null, matchScore: 0, notes: 'Missing on both sites', url: pathKey, visualDiff: null });
       return;
     }
 
     if (!prod) {
-      console.warn(`[DIFF] Prod site missing for ${pathKey}`);
-      results.push({htmlDiff: null, matchScore: 0, notes: 'Missing on prod site', url: pathKey, visualDiff: null});
+      console.warn(`[DIFF] Production site missing for ${pathKey}`);
+      results.push({ htmlDiff: null, matchScore: 0, notes: 'Missing on production site', url: pathKey, visualDiff: null });
       return;
     }
 
@@ -200,3 +198,4 @@ export async function compareSites(
 
   await generateHtmlReport(results, options.outputPath ?? 'report.html', options.htmlThreshold ?? 0);
 }
+
