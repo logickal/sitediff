@@ -1,5 +1,6 @@
 import {diffWords} from 'diff';
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
 // eslint-disable-next-line n/no-extraneous-import
 import pLimit from 'p-limit';
@@ -71,7 +72,8 @@ export async function compareSites(
   const results: PageResult[] = [];
   await fs.mkdir('diff_output', {recursive: true});
 
-  const limit = pLimit(options.concurrency ?? 4);
+  const concurrency = options.concurrency ?? os.cpus().length;
+  const limit = pLimit(concurrency);
 
   await Promise.all(Object.keys(prodPages).map(pathKey => limit(async () => {
     const prod = prodPages[pathKey];
@@ -115,37 +117,39 @@ export async function compareSites(
           normalizedTestHtml,
         );
 
-        prodPng = PNG.sync.read(prod.screenshot);
-        testPng = PNG.sync.read(test.screenshot);
+        if (!prod.screenshot.equals(test.screenshot)) {
+          prodPng = PNG.sync.read(prod.screenshot);
+          testPng = PNG.sync.read(test.screenshot);
 
-        if (prodPng.width !== testPng.width || prodPng.height !== testPng.height) {
-          console.warn(
-            `[DIFF] Screenshot size mismatch for ${pathKey}: prod=${prodPng.width}x${prodPng.height}, ` +
-            `test=${testPng.width}x${testPng.height}`,
+          if (prodPng.width !== testPng.width || prodPng.height !== testPng.height) {
+            console.warn(
+              `[DIFF] Screenshot size mismatch for ${pathKey}: prod=${prodPng.width}x${prodPng.height}, ` +
+              `test=${testPng.width}x${testPng.height}`,
+            );
+          }
+
+          const width = Math.min(prodPng.width, testPng.width);
+          const height = Math.min(prodPng.height, testPng.height);
+
+          const diff = new PNG({height, width});
+          const mismatch = pixelmatch(
+            prodPng.data,
+            testPng.data,
+            diff.data,
+            width,
+            height,
+            {threshold: 0.1},
           );
-        }
+          visualDiffPercent = (mismatch / (width * height)) * 100;
 
-        const width = Math.min(prodPng.width, testPng.width);
-        const height = Math.min(prodPng.height, testPng.height);
-
-        const diff = new PNG({height, width});
-        const mismatch = pixelmatch(
-          prodPng.data,
-          testPng.data,
-          diff.data,
-          width,
-          height,
-          {threshold: 0.1},
-        );
-        visualDiffPercent = (mismatch / (width * height)) * 100;
-
-        if (
-          options.imageThreshold !== undefined &&
-          visualDiffPercent > options.imageThreshold
-        ) {
-          const safeFilename = sanitizeFilename(pathKey) + '_diff.png';
-          diffImagePath = path.join('diff_output', safeFilename);
-          await fs.writeFile(diffImagePath, PNG.sync.write(diff));
+          if (
+            options.imageThreshold !== undefined &&
+            visualDiffPercent > options.imageThreshold
+          ) {
+            const safeFilename = sanitizeFilename(pathKey) + '_diff.png';
+            diffImagePath = path.join('diff_output', safeFilename);
+            await fs.writeFile(diffImagePath, PNG.sync.write(diff));
+          }
         }
       }
 
