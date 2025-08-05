@@ -51,7 +51,7 @@ function normalizeHtmlForComparison(html: string, baseUrls: string[], strict = f
     normalized = normalized.replaceAll(new RegExp(escapedAlt, 'g'), '__BASEURL__/');
   }
 
-  normalized = normalized.replaceAll(/nonce=(['"]).*?\1/g, 'nonce=$1__REDACTED__$1');
+  normalized = normalized.replaceAll(/nonce=(["']).*?\1/g, 'nonce=$1__REDACTED__$1');
 
   return normalized;
 }
@@ -67,7 +67,8 @@ function calculateHtmlDiffPercent(htmlA: string, htmlB: string): number {
 export async function compareSites(
   prodPages: SitePages,
   testPages: SitePages,
-  options: CompareOptions = {}
+  options: CompareOptions = {},
+  paths: string[] = [...new Set([...Object.keys(prodPages), ...Object.keys(testPages)])],
 ) {
   const results: PageResult[] = [];
   await fs.mkdir('diff_output', {recursive: true});
@@ -75,9 +76,21 @@ export async function compareSites(
   const concurrency = options.concurrency ?? os.cpus().length;
   const limit = pLimit(concurrency);
 
-  await Promise.all(Object.keys(prodPages).map(pathKey => limit(async () => {
+  await Promise.all(paths.map(pathKey => limit(async () => {
     const prod = prodPages[pathKey];
     const test = testPages[pathKey];
+
+    if (!prod && !test) {
+      console.warn(`[DIFF] Page missing on both sites for ${pathKey}`);
+      results.push({ htmlDiff: null, matchScore: 0, notes: 'Missing on both sites', url: pathKey, visualDiff: null });
+      return;
+    }
+
+    if (!prod) {
+      console.warn(`[DIFF] Production site missing for ${pathKey}`);
+      results.push({ htmlDiff: null, matchScore: 0, notes: 'Missing on production site', url: pathKey, visualDiff: null });
+      return;
+    }
 
     if (!test) {
       console.warn(`[DIFF] Test site missing for ${pathKey}`);
@@ -185,3 +198,4 @@ export async function compareSites(
 
   await generateHtmlReport(results, options.outputPath ?? 'report.html', options.htmlThreshold ?? 0);
 }
+

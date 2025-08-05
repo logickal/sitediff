@@ -18,7 +18,6 @@ export async function fetchPages(
   paths: string[],
   logFn: (msg: string) => void,
   options: FetchPagesOptions = {},
-  concurrency = os.cpus().length,
 ) {
   const browser = await chromium.launch();
   const contextOptions: BrowserContextOptions = {};
@@ -27,7 +26,7 @@ export async function fetchPages(
   }
 
   const context = await browser.newContext(contextOptions);
-  const limit = pLimit(options.concurrency ?? 4);
+  const limit = pLimit(options.concurrency ?? os.cpus().length);
 
   const results: Record<string, {html: string; screenshot: Buffer}> = {};
 
