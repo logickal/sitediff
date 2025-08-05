@@ -93,6 +93,8 @@ export async function compareSites(
     let normalizedProdHtml = prod.html;
     let normalizedTestHtml = test.html;
     let shouldInclude = true;
+    let prodPng: PNG | undefined;
+    let testPng: PNG | undefined;
 
     try {
       normalizedProdHtml = normalizeHtmlForComparison(
@@ -113,8 +115,16 @@ export async function compareSites(
           normalizedTestHtml,
         );
 
-        const prodPng = PNG.sync.read(prod.screenshot);
-        const testPng = PNG.sync.read(test.screenshot);
+        prodPng = PNG.sync.read(prod.screenshot);
+        testPng = PNG.sync.read(test.screenshot);
+
+        if (prodPng.width !== testPng.width || prodPng.height !== testPng.height) {
+          console.warn(
+            `[DIFF] Screenshot size mismatch for ${pathKey}: prod=${prodPng.width}x${prodPng.height}, ` +
+            `test=${testPng.width}x${testPng.height}`,
+          );
+        }
+
         const width = Math.min(prodPng.width, testPng.width);
         const height = Math.min(prodPng.height, testPng.height);
 
@@ -148,7 +158,11 @@ export async function compareSites(
     } catch (error) {
       score = 0;
       notes = 'Error comparing page content';
-      console.error(`[DIFF] Error comparing ${pathKey}:`, error);
+      const sizeInfo =
+        prodPng && testPng
+          ? ` (prod: ${prodPng.width}x${prodPng.height}, test: ${testPng.width}x${testPng.height})`
+          : '';
+      console.error(`[DIFF] Error comparing ${pathKey}${sizeInfo}:`, error);
     }
 
     if (shouldInclude) {
